@@ -36,7 +36,7 @@ namespace SmartTalesAndTaskWebAPI.Controllers
                 }
 
                 string extractedText = ProcessImageWithTesseract(filePath);
-                return Ok(new { text = extractedText });
+                return Ok(extractedText);
             }
             catch (Exception ex)
             {
