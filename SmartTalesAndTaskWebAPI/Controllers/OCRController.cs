@@ -43,8 +43,38 @@ namespace SmartTalesAndTaskWebAPI.Controllers
                 return StatusCode(500, "Error processing image.");
             }
 
+        }
+
+        [HttpPost("image-to-speech")]
+        public async Task<IActionResult> ImageToSpeech([FromForm] IFormFile image)
+        {
+            if (image == null || image.Length == 0)
+                return BadRequest("No image uploaded.");
+
+            string uploadFolder = _configuration["UploadSettings:UploadFolder"] ?? "Uploads";
+            string filePath = Path.Combine(uploadFolder, image.FileName);
+
+            try
+            {
+                Directory.CreateDirectory(uploadFolder);
+
+                using (var stream = new FileStream(filePath, FileMode.Create))
+                {
+                    await image.CopyToAsync(stream);
+                }
+
+                string extractedText = ProcessImageWithTesseract(filePath);
+                return Ok(extractedText);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, "Error processing image.");
+            }
+
 
         }
+
+
 
         private string ProcessImageWithTesseract(string imagePath)
         {

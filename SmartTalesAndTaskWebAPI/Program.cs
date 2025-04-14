@@ -14,6 +14,10 @@ builder.Services.AddCors(options =>
         policy => policy.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader());
 });
 
+// Add HTTP Client
+builder.Services.AddHttpClient();
+
+
 // Read settings from appsettings.json
 var uploadFolder = builder.Configuration["UploadSettings:UploadFolder"];
 Directory.CreateDirectory(uploadFolder); // Ensure upload folder exists
