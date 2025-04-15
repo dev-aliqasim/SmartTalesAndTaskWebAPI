@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using System.Net.Http;
 using Tesseract;
 
 namespace SmartTalesAndTaskWebAPI.Controllers
@@ -10,11 +11,12 @@ namespace SmartTalesAndTaskWebAPI.Controllers
     {
         private readonly IConfiguration _configuration;
         private readonly IWebHostEnvironment _env;
-
-        public OCRController(IConfiguration configuration, IWebHostEnvironment env)
+        private readonly HttpClient _httpClient;
+        public OCRController(IConfiguration configuration, IWebHostEnvironment env, IHttpClientFactory httpClientFactory)
         {
             _configuration = configuration;
             _env = env;
+            _httpClient = httpClientFactory.CreateClient();
         }
 
         [HttpPost("extract-text")]
@@ -64,7 +66,28 @@ namespace SmartTalesAndTaskWebAPI.Controllers
                 }
 
                 string extractedText = ProcessImageWithTesseract(filePath);
-                return Ok(extractedText);
+
+                //--------------------------------------------------------------------//
+                //----------- Now converting extracted text to audio-----------------//
+
+                var fastApiUrl = _configuration.GetSection("Api:FastApi:Url").Value;
+                var TTS_Endpoint = fastApiUrl + "tts/synthesize"; // Or service URL in Docker/K8s
+
+                var json = new StringContent(
+                    System.Text.Json.JsonSerializer.Serialize(new { text = extractedText }),
+                    System.Text.Encoding.UTF8,
+                    "application/json");
+
+                var response = await _httpClient.PostAsync(TTS_Endpoint, json);
+
+                if (response.IsSuccessStatusCode)
+                {
+                    var audioBytes = await response.Content.ReadAsByteArrayAsync();
+                    return File(audioBytes, "audio/wav", "tts_output.wav");
+                }
+
+                return StatusCode((int)response.StatusCode, await response.Content.ReadAsStringAsync());
+
             }
             catch (Exception ex)
             {
